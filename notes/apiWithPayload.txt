@@ -1,0 +1,8 @@
+http://localhost:8080/api/register
+{
+"email": "shrey@example.com",
+"password": "12345678",
+"firstname": "Shreya",
+"lastname": "Rai",
+"dob": "2003-03-03"
+}
