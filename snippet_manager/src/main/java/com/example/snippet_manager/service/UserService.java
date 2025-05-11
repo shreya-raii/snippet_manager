@@ -17,7 +17,7 @@ public class UserService {
 
     public String registerUser(UserDTO dto) {
         if (userRepository.findByEmail(dto.getEmail()).isPresent()) {
-            return "User with this email already exists";
+            return "Email already registered";
         }
 
         User user = User.builder()
@@ -25,17 +25,29 @@ public class UserService {
                 .lastName(dto.getLastname())
                 .dob(dto.getDob())
                 .email(dto.getEmail())
-                .password(dto.getPassword())
+                .password(dto.getPassword()) // TODO: Hash password before storing
                 .build();
 
         userRepository.save(user);
         return "Registration successful";
     }
 
-    public Optional<User> login(LoginDTO dto) {
-        System.out.println(userRepository.findByEmail(dto.getEmail()));
+    public String login(LoginDTO dto) {
+        Optional<User> userOptional = userRepository.findByEmail(dto.getEmail());
 
-        return userRepository.findByEmail(dto.getEmail())
-                .filter(user -> user.getPassword().equals(dto.getPassword()));
+        if (userOptional.isEmpty()) {
+            return "Email doesn't exist, please register";
+        }
+
+        User user = userOptional.get();
+        if (!user.getPassword().equals(dto.getPassword())) { // TODO: Use hashed password comparison
+            return "Password incorrect";
+        }
+
+        return "Login successful";
+    }
+
+    public Optional<User> getUserByEmail(String email) {
+        return userRepository.findByEmail(email);
     }
 }

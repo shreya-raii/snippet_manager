@@ -46,20 +46,31 @@ export default function RegisterPage() {
     setIsLoading(true);
     try {
       const response = await axios.post("http://localhost:8080/api/register", formData);
+      
+      // Check the response status
       if (response.status === 200) {
         toast.success("Registration successful! Redirecting to login...", {
           autoClose: 1500,
           onClose: () => router.push('/login')
         });
+      } else if (response.status === 401) {
+        toast.error("Email already registered");
       } else {
-        toast.error(response.data.message || "Registration failed");
+        toast.error(response.data || "Registration failed");
       }
     } catch (error) {
-      toast.error("Server error. Please try again.");
+      if (error.response) {
+        // Handle server errors
+        toast.error(error.response.data || "Server error. Please try again.");
+      } else {
+        // Handle network or other issues
+        toast.error("Network error. Please check your connection.");
+      }
     } finally {
       setIsLoading(false);
     }
   };
+
 
   return (
     <div className="min-h-screen bg-gradient-to-r from-blue-100 to-purple-200 flex items-center justify-center px-4">

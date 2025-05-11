@@ -1,0 +1,159 @@
+.dashboardContainer {
+  padding: 20px;
+  font-family: Arial, sans-serif;
+}
+
+.title {
+  font-size: 2rem;
+  margin-bottom: 20px;
+}
+
+.addButton {
+  background-color: #008cba;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-bottom: 20px;
+}
+
+.snippetList {
+  list-style-type: none;
+  padding: 0;
+}
+
+.snippetItem {
+  background: #f9f9f9;
+  margin-bottom: 15px;
+  padding: 10px;
+  border-radius: 6px;
+  box-shadow: 0 0 4px rgba(0,0,0,0.1);
+}
+
+.languageTag {
+  display: inline-block;
+  font-weight: bold;
+  color: #444;
+  margin-bottom: 5px;
+}
+
+.codeBlock {
+  position: relative;
+  background-color: #f5f5f5;
+  padding: 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  color: black;
+  width: 100%;
+  overflow: auto;
+  white-space: pre-wrap;
+  display: block; /* important for natural flow */
+  min-height: 100px;
+}
+
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.3);
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 15px;
+}
+
+.modalActions button {
+  margin-left: 10px;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.select {
+  width: 100%;
+  padding: 10px;
+  margin-top: 10px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+}
+
+.textarea {
+  width: 100%;
+  padding: 10px;
+  margin-top: 10px;
+  font-family: monospace;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+}
+
+.deleteButton {
+  background-color: #e63946;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  margin-left: 10px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.deleteButton:hover {
+  background-color: #d62828;
+}
+
+/* Align Add New Snippet button to the right */
+.topActions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 1rem;
+}
+
+/* Style each snippet row */
+.snippetItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  background-color: #f9f9f9;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+/* Language tag and delete button container */
+.snippetMeta {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  justify-content: space-between;
+}
+
+/* Optional responsive fix */
+@media (max-width: 600px) {
+  .snippetMeta {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .deleteButton {
+    align-self: flex-end;
+  }
+}

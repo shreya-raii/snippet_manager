@@ -21,17 +21,32 @@ public class UserController {
     @PostMapping("/register")
     public ResponseEntity<String> register(@RequestBody UserDTO request) {
         String result = userService.registerUser(request);
-        return result.equals("Registration successful") ?
-                ResponseEntity.ok(result) : ResponseEntity.badRequest().body(result);
+        System.out.println(result);
+
+        switch(result) {
+            case "Registration successful":
+                return ResponseEntity.ok(result);
+            case "Email already registered":
+                return ResponseEntity.status(401).body(result);
+            default:
+                return ResponseEntity.status(403).body("Unexpected error");
+        }
     }
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginDTO login) {
-        Optional<User> user = userService.login(login);
-        if (user.isPresent()) {
-            return ResponseEntity.ok(user.get()); // return user JSON
-        } else {
-            return ResponseEntity.status(401).body("Invalid credentials");
+        String result = userService.login(login);
+
+        switch (result) {
+            case "Login successful":
+                return ResponseEntity.ok(userService.getUserByEmail(login.getEmail()).get());
+            case "Email doesn't exist, please register":
+                return ResponseEntity.status(404).body(result); // Client should handle redirect to registration
+            case "Password incorrect":
+                return ResponseEntity.status(401).body(result);
+            default:
+                return ResponseEntity.status(500).body("Unexpected error");
         }
     }
+
 }

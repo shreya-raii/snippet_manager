@@ -33,16 +33,23 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       const response = await axios.post("http://localhost:8080/api/login", formData);
-      if (response.status === 200) {
-        toast.success("Login successful! Redirecting...", {
-          autoClose: 1500,
-          onClose: () => router.push(`/user/dashboard?id=${response.data.id}`)
-        });
-      } else {
-        toast.error(response.data.message || 'Login failed');
-      }
+      toast.success("Login successful! Redirecting to dashboard...", {
+        autoClose: 1500,
+        onClose: () => router.push(`/user/dashboard/${response.data.id}`)
+      });
     } catch (error) {
-      toast.error("Invalid credentials or server error.");
+      if (error.response) {
+        const { status, data } = error.response;
+        if (status === 404) {
+          toast.error("Email doesn't exist, please register.");
+        } else if (status === 401) {
+          toast.error("Incorrect password, try again.");
+        } else {
+          toast.error(data.message || "Login failed");
+        }
+      } else {
+        toast.error("Network error or server unreachable.");
+      }
     } finally {
       setIsLoading(false);
     }
