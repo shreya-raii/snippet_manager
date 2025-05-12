@@ -71,7 +71,15 @@ A full-stack snippet management application built using Spring Boot and MySQL (p
       code TEXT NOT NULL,
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     );
-
+    CREATE TABLE collaborated_snippets (
+        cs_id INT AUTO_INCREMENT PRIMARY KEY,
+        language VARCHAR(100),
+        code TEXT,
+        collaborated_by INT NOT NULL, -- user who created the snippet
+        collaborated_with TEXT,       -- comma-separated user IDs (e.g., "3,5,9")
+        permission_type ENUM('read', 'write') DEFAULT 'read',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
    ```
 
 ### 2. Configure Spring Boot

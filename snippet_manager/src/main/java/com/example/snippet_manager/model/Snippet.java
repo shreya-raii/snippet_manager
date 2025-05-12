@@ -22,4 +22,13 @@ public class Snippet {
 
     @Column(name = "user_id")
     private Long userId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "collaboration", nullable = false)
+    private CollaborationStatus collaboration;
+
+    public enum CollaborationStatus {
+        No,
+        Yes
+    }
 }

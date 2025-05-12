@@ -22,8 +22,22 @@ public class SnippetController {
         return ResponseEntity.ok(snippets);
     }
 
+    @GetMapping("/collaborated/{userId}")
+    public ResponseEntity<List<Snippet>> getCollaboratedSnippetsByUserId(@PathVariable Long userId) {
+        List<Snippet> snippets = snippetService.getCollaboratedSnippetsByUserId(userId);
+        return ResponseEntity.ok(snippets);
+    }
+
+    @GetMapping("/shared/{userId}")
+    public ResponseEntity<List<Object[]>> getSharedSnippetsByUserId(@PathVariable Long userId) {
+        List<Object[]> snippets = snippetService.getSharedSnippetsByUserId(userId);
+        System.out.println(snippets);
+        return ResponseEntity.ok(snippets);
+    }
+
     @PostMapping("/create")
     public ResponseEntity<String> createSnippet(@RequestBody SnippetDTO dto) {
+        System.out.println(dto);
         snippetService.saveSnippet(dto);
         return ResponseEntity.ok("Snippet saved");
     }

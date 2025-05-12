@@ -5,9 +5,12 @@ import axios from 'axios';
 import styles from './dashboard.module.css';
 import { toast } from 'react-toastify';
 import { useParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 
 const Dashboard = () => {
   const [snippets, setSnippets] = useState([]);
+  const [collaboratedSnippets, setCollaboratedSnippets] = useState([]);
+  const [sharedSnippets, setSharedSnippets] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [step, setStep] = useState(1);
   const [newSnippet, setNewSnippet] = useState({ language: 'JavaScript', code: '' });
@@ -15,6 +18,10 @@ const Dashboard = () => {
   const [currentSnippet, setCurrentSnippet] = useState(null);
   const [snippetId, setSnippetId] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [collaboratorsEnabled, setCollaboratorsEnabled] = useState(false);
+  const [collaborators, setCollaborators] = useState([]);
+  const [allUsers, setAllUsers] = useState([]);
+  const [permissionAccess, setPermissionAccess] = useState(null);
 
   const params = useParams();
   const userId = params?.id;
@@ -30,18 +37,27 @@ const Dashboard = () => {
 
   const fetchSnippets = async (userId) => {
     try {
-      const response = await axios.get(`http://localhost:8080/api/snippets/user/${userId}`);
-      setSnippets(response.data);
+      const responseSnippets = await axios.get(`http://localhost:8080/api/snippets/user/${userId}`);
+      setSnippets(responseSnippets.data);
+
+      const responseCollaboratedSnippets = await axios.get(`http://localhost:8080/api/snippets/collaborated/${userId}`);
+      setCollaboratedSnippets(responseCollaboratedSnippets.data);
+
+      const responseSharedSnippets = await axios.get(`http://localhost:8080/api/snippets/shared/${userId}`);
+      setSharedSnippets(responseSharedSnippets.data);
     } catch (error) {
       toast.error('Failed to fetch snippets');
     }
   };
 
-  const openAddSnippetModal = () => {
+  const openAddSnippetModal = async () => {
     setNewSnippet({ language: 'JavaScript', code: '' });
     setStep(1);
     setShowModal(true);
+    setCollaboratorsEnabled(false);
+    setCollaborators([]);
   };
+
 
   const closeModal = () => {
     setShowModal(false);
@@ -54,6 +70,7 @@ const Dashboard = () => {
       await axios.post('http://localhost:8080/api/snippets/create', {
         ...newSnippet,
         userId: userId,
+        collaborators: collaboratorsEnabled ? collaborators : []
       });
       toast.success('Snippet saved!');
       closeModal();
@@ -64,6 +81,13 @@ const Dashboard = () => {
   };
 
   const openEditModal = (snippet) => {
+    setCurrentSnippet({ ...snippet });
+    setSnippetId(snippet.id);
+    setEditModalOpen(true);
+  };
+
+  const openSharedEditModal = (snippet, permission) => {
+    setPermissionAccess(permission);
     setCurrentSnippet({ ...snippet });
     setSnippetId(snippet.id);
     setEditModalOpen(true);
@@ -88,67 +112,199 @@ const Dashboard = () => {
   };
 
   const handleDeleteSnippet = async (id) => {
-    try {
-      await axios.post('http://localhost:8080/api/snippets/delete', {
-        id: id
-      });
-      toast.success('Snippet deleted!');
-      fetchSnippets(userId);
-    } catch (error) {
-      toast.error('Failed to delete snippet');
+    if (confirm("Are you sure you want to delete this snippet?")) {
+      try {
+        await axios.post('http://localhost:8080/api/snippets/delete', {
+          id: id
+        });
+        toast.success('Snippet deleted!');
+        fetchSnippets(userId);
+      } catch (error) {
+        toast.error('Failed to delete snippet');
+      }
     }
   };
 
+  const router = useRouter();
+
+  const handleLogout = () => {
+    if (confirm("Are you sure you want to log out?")) {
+      localStorage.removeItem('token');
+      router.push('/login');
+    }
+  };
+  
   return (
     <div className={styles.dashboardContainer}>
-      <h1 className={styles.title}>Dashboard - Snippet Manager</h1>
-
-      <div className={styles.topActions}>
-        <button className={styles.addButton} onClick={openAddSnippetModal}>
-          Add New Snippet
-        </button>
+      <div className={styles.headerRow}>
+        <h1 className={styles.title}>Snippet Workspace</h1>
+        <div className={styles.topActions}>
+          <button className={styles.addButton} onClick={openAddSnippetModal}>Add New Snippet</button>
+          <button className={styles.logoutButton} onClick={handleLogout}>Logout</button>
+        </div>
       </div>
 
-      <ul className={styles.snippetList}>
-        {snippets.map(snippet => (
-          <li key={snippet.id} className={styles.snippetItem}>
-            <div className={styles.snippetMeta}>
-              <span className={styles.languageTag}>{snippet.language}</span>
-              <button
-                className={styles.deleteButton}
-                onClick={() => handleDeleteSnippet(snippet.id)}
-              >
-                Delete
-              </button>
-            </div>
-            <pre
-              className={styles.codeBlock}
-              onClick={() => openEditModal(snippet)}
-            >
-              {snippet.code.length > 60 ? snippet.code.slice(0, 60) + '...' : snippet.code}
-            </pre>
-          </li>
-        ))}
-      </ul>
+      <div className={styles.gridContainer}>
+        {/* My Snippets (1/3) */}
+        <div className={styles.boxOneThird}>
+          <h2 className={styles.heading}>My Snippets</h2>
+          {snippets.map(snippet => (
+            <li key={snippet.id} className={styles.snippetItem}>
+              <div className={styles.snippetMeta}>
+                <span className={styles.languageTag}>{snippet.language}</span>
+                <button className={styles.deleteButton} onClick={() => handleDeleteSnippet(snippet.id)}>Delete</button>
+              </div>
+              <pre className={styles.codeBlock} onClick={() => openEditModal(snippet)}>
+                {snippet.code.length > 60 ? snippet.code.slice(0, 60) + '...' : snippet.code}
+              </pre>
+            </li>
+          ))}
+        </div>
 
+        {/* Collaboration Section (2/3) */}
+        <div className={styles.boxTwoThird}>
+          <h2 className={styles.heading}>Collaboration Space</h2>
+          <div className={styles.collabGrid}>
+            
+            {/* Collaborated Snippets Box */}
+            <div className={styles.collabCard}>
+              <h3 className={styles.cardTitle}>My Collaborations</h3>
+              <ul className={styles.snippetList}>
+                {collaboratedSnippets.map(snippet => (
+                  <li key={snippet.id} className={styles.snippetItem}>
+                    <div className={styles.snippetMeta}>
+                      <span className={styles.languageTag}>{snippet.language}</span>
+                      <button className={styles.deleteButton} onClick={() => handleDeleteSnippet(snippet.id)}>Delete</button>
+                    </div>
+                    <pre className={styles.codeBlock} onClick={() => openEditModal(snippet)}>
+                      {snippet.code.length > 60 ? snippet.code.slice(0, 60) + '...' : snippet.code}
+                    </pre>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Shared With Me Box */}
+            <div className={styles.collabCard}>
+              <h3 className={styles.cardTitle}>Shared With Me</h3>
+              <ul className={styles.snippetList}>
+                {sharedSnippets.map(([snippet, permission]) => (
+                  <li key={snippet.id} className={styles.snippetItem}>
+                    <div className={styles.snippetMeta}>
+                      <span className={styles.languageTag}>{snippet.language}</span>
+                      <span className={styles.permissionTag}>{permission}-access</span>
+                    </div>
+                    <pre
+                      className={styles.codeBlock}
+                      onClick={() => openSharedEditModal(snippet, permission)}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      {snippet.code.length > 60 ? snippet.code.slice(0, 60) + '...' : snippet.code}
+                    </pre>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+
+
+      </div>
 
       {showModal && (
         <div className={styles.modalOverlay}>
           <div className={styles.modal}>
+            <h2 className={styles.modalHeading}>Add New Snippet</h2>
             {step === 1 && (
               <>
-                <h3>Select Language</h3>
-                <select
-                  value={newSnippet.language}
-                  onChange={e => setNewSnippet({ ...newSnippet, language: e.target.value })}
-                  className={styles.select}
-                >
-                  <option value="JavaScript">JavaScript</option>
-                  <option value="Python">Python</option>
-                  <option value="Java">Java</option>
-                  <option value="C++">C++</option>
-                  <option value="Ruby">Ruby</option>
-                </select>
+                <div className={styles.inputGroupRow}>
+                  <label className={styles.inlineLabel}>Select Language</label>
+                  <select
+                    value={newSnippet.language}
+                    onChange={e => setNewSnippet({ ...newSnippet, language: e.target.value })}
+                    className={styles.inlineSelect}
+                  >
+                    <option value="JavaScript">JavaScript</option>
+                    <option value="Python">Python</option>
+                    <option value="Java">Java</option>
+                    <option value="C++">C++</option>
+                    <option value="Ruby">Ruby</option>
+                  </select>
+                </div>
+
+
+                <div className={styles.inputGroupRow}>
+                  <label className={styles.inlineLabel}>Enable Collaboration?</label>
+                  <select
+                    value={collaboratorsEnabled ? 'Yes' : 'No'}
+                    onChange={(e) => {
+                      const isYes = e.target.value === 'Yes';
+                      setCollaboratorsEnabled(isYes);
+                      setCollaborators(isYes ? [{ userId: '', permission: 'Read' }] : []);
+
+                      if (isYes) {
+                        (async () => {
+                          try {
+                            const response = await axios.get('http://localhost:8080/api/users');
+                            setAllUsers(response.data);
+                          } catch (err) {
+                            toast.error("Failed to fetch users for collaboration");
+                          }
+                        })();
+                      }
+                    }}
+                    className={styles.inlineSelect}
+                  >
+                    <option value="No">No</option>
+                    <option value="Yes">Yes</option>
+                  </select>
+                </div>              
+
+                {collaboratorsEnabled && (
+                  <div className={styles.collabSection}>
+                    <button
+                      className={styles.addButtonStyled}
+                      onClick={() => setCollaborators([...collaborators, { userId: '', permission: 'Read' }])}
+                    >
+                      + Add more users
+                    </button>
+                    {collaborators.map((collab, index) => (
+                      <div key={index} className={styles.collabRow}>
+                        <div className={styles.formRow}>
+                          <select
+                            value={collab.userId}
+                            onChange={e => {
+                              const updated = [...collaborators];
+                              updated[index].userId = e.target.value;
+                              setCollaborators(updated);
+                            }}
+                            className={styles.select}
+                          >
+                            <option value="">Select User</option>
+                            {allUsers.map(user => (
+                              <option key={user.id} value={user.id}>{user.email}</option>
+                            ))}
+                          </select>
+
+                          <select
+                            value={collab.permission}
+                            onChange={e => {
+                              const updated = [...collaborators];
+                              updated[index].permission = e.target.value;
+                              setCollaborators(updated);
+                            }}
+                            className={styles.select}
+                          >
+                            <option value="">Select Permission</option>
+                            <option value="Read">Read</option>
+                            <option value="Write">Write</option>
+                          </select>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 <div className={styles.modalActions}>
                   <button onClick={closeModal}>Cancel</button>
                   <button onClick={() => setStep(2)}>Next</button>
@@ -180,17 +336,24 @@ const Dashboard = () => {
         <div className={styles.modalOverlay}>
           <div className={styles.modal}>
             <h3>Edit Snippet - {currentSnippet.language}</h3>
+            {permissionAccess === 'Read' && (
+              <div style={{ color: 'gray', fontStyle: 'italic', marginBottom: '0.5rem', fontSize: '15px' }}>
+                🔒 Read-only access. You can view the snippet but not edit it.
+              </div>
+            )}
             <textarea
               className={styles.textarea}
               rows={10}
               value={currentSnippet.code}
-              onChange={(e) =>
-                setCurrentSnippet({ ...currentSnippet, code: e.target.value })
-              }
+              onChange={(e) => setCurrentSnippet({ ...currentSnippet, code: e.target.value })}
             />
             <div className={styles.modalActions}>
               <button onClick={() => setEditModalOpen(false)}>Cancel</button>
-              <button onClick={handleUpdateSnippet}>Save</button>
+              <span title={permissionAccess === 'Read' ? 'read-only access' : ''}>
+                <button disabled={permissionAccess === 'Read'}
+                  style={{ cursor: permissionAccess === 'Read' ? 'not-allowed' : 'pointer' }}
+                  onClick={handleUpdateSnippet}>Save</button>
+              </span>
             </div>
           </div>
         </div>

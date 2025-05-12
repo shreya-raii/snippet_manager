@@ -1,6 +1,10 @@
 package com.example.snippet_manager.dto;
 
+import com.example.snippet_manager.model.SharedSnippet.PermissionAccess;
+import com.example.snippet_manager.model.Snippet.CollaborationStatus;
 import lombok.*;
+
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -11,4 +15,14 @@ public class SnippetDTO {
     private String language;
     private String code;
     private Long userId;
+    private List<CollaboratorDTO> collaborators;  // ✅ Needed for getCollaborators()
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class CollaboratorDTO {
+        private Long userId;
+        private PermissionAccess permission;
+    }
 }
+
