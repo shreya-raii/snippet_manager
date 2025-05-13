@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -16,6 +16,15 @@ export default function RegisterPage() {
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    const userId = localStorage.getItem('userId');
+
+    if (token && userId) {
+      router.replace('/user/dashboard');
+    }
+  }, []);
 
   const validate = () => {
     const newErrors = {};
@@ -47,7 +56,6 @@ export default function RegisterPage() {
     try {
       const response = await axios.post("http://localhost:8080/api/register", formData);
       
-      // Check the response status
       if (response.status === 200) {
         toast.success("Registration successful! Redirecting to login...", {
           autoClose: 1500,
@@ -60,10 +68,8 @@ export default function RegisterPage() {
       }
     } catch (error) {
       if (error.response) {
-        // Handle server errors
         toast.error(error.response.data || "Server error. Please try again.");
       } else {
-        // Handle network or other issues
         toast.error("Network error. Please check your connection.");
       }
     } finally {

@@ -29,7 +29,6 @@ public class SnippetService {
 
     public List<Object[]> getSharedSnippetsByUserId(Long userId) {
         List<Object[]> results = sharedSnippetRepository.findSharedSnippetsWithPermissionByUserId(userId);
-        System.out.println(results);
         return results;
     }
 
@@ -70,5 +69,10 @@ public class SnippetService {
         Snippet existingSnippet = snippetRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Snippet not found with id: " + id));
         snippetRepository.delete(existingSnippet);
+    }
+
+    public List<Object[]> getSnippetCollaborators(Long id) {
+        List<Object[]> results = sharedSnippetRepository.findAllBySnippetId(id);
+        return results;
     }
 }

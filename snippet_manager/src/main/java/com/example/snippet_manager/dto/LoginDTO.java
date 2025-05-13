@@ -10,7 +10,5 @@ import lombok.*;
 public class LoginDTO {
     private String email;
     private String password;
-
-    // Getters and Setters
 }
 

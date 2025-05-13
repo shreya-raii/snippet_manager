@@ -48,7 +48,7 @@
   width: 100%;
   overflow: auto;
   white-space: pre-wrap;
-  display: block; /* important for natural flow */
+  display: block; 
   min-height: 100px;
 }
 
@@ -118,14 +118,12 @@
   background-color: #d62828;
 }
 
-/* Align Add New Snippet button to the right */
 .topActions {
   display: flex;
   justify-content: flex-end;
   margin-bottom: 1rem;
 }
 
-/* Style each snippet row */
 .snippetItem {
   display: flex;
   align-items: center;
@@ -137,7 +135,6 @@
   margin-bottom: 1rem;
 }
 
-/* Language tag and delete button container */
 .snippetMeta {
   display: flex;
   align-items: center;
@@ -146,7 +143,6 @@
   justify-content: space-between;
 }
 
-/* Optional responsive fix */
 @media (max-width: 600px) {
   .snippetMeta {
     flex-direction: column;
@@ -301,7 +297,7 @@
   font-size: 20px;
   font-weight: 600;
   margin-bottom: 15px;
-  color: #2c3e50;
+  color: #000000;
   border-bottom: 1px solid #ddd;
   padding-bottom: 5px;
 }
@@ -634,4 +630,45 @@
   color: #333;
   border-bottom: 1px solid #e0e0e0;
   padding-bottom: 10px;
+}
+
+.searchWrapper {
+  position: relative;
+  margin-bottom: 12px;
+}
+
+.searchInput {
+  width: 100%;
+  padding: 8px 32px 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+
+.searchIcon {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #888;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  font-size:12px;
+}
+.pagination button {
+  padding: 4px 10px;
+  border: none;
+  background-color: #619a9a;
+  color: white;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.pagination button:disabled {
+  background-color: #aed6d6;
+  cursor: not-allowed;
 }

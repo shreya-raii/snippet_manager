@@ -7,8 +7,11 @@ import com.example.snippet_manager.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import com.example.snippet_manager.util.JwtUtil;
+
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -16,6 +19,7 @@ import java.util.Optional;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final JwtUtil jwtUtil;
 
     public String registerUser(UserDTO dto) {
         if (userRepository.findByEmail(dto.getEmail()).isPresent()) {
@@ -34,20 +38,29 @@ public class UserService {
         return "Registration successful";
     }
 
-    public String login(LoginDTO dto) {
+    public ResponseEntity<?> login(LoginDTO dto) {
         Optional<User> userOptional = userRepository.findByEmail(dto.getEmail());
 
         if (userOptional.isEmpty()) {
-            return "Email doesn't exist, please register";
+            return ResponseEntity.status(404).body("Email doesn't exist, please register");
         }
 
         User user = userOptional.get();
-        if (!user.getPassword().equals(dto.getPassword())) { // TODO: Use hashed password comparison
-            return "Password incorrect";
+
+        if (!user.getPassword().equals(dto.getPassword())) {
+            return ResponseEntity.status(401).body("Password incorrect");
         }
 
-        return "Login successful";
+        String token = jwtUtil.generateToken(user.getEmail());
+
+        return ResponseEntity.ok(
+                Map.of(
+                        "token", token,
+                        "user", user
+                )
+        );
     }
+
 
     public Optional<User> getUserByEmail(String email) {
         return userRepository.findByEmail(email);

@@ -14,7 +14,5 @@ public class UserDTO {
     private String email;
     private String password;
     private LocalDate dob;
-
-    // Getters and Setters
 }
 

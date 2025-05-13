@@ -22,16 +22,40 @@ const Dashboard = () => {
   const [collaborators, setCollaborators] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
   const [permissionAccess, setPermissionAccess] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  
+  const itemsPerPage = 5;
+  const [myPage, setMyPage] = useState(1);
+  const [collabPage, setCollabPage] = useState(1);
+  const [sharedPage, setSharedPage] = useState(1);
 
-  const params = useParams();
-  const userId = params?.id;
+  const router = useRouter();
+
+  const userId = localStorage.getItem('userId');
+  const firstName = localStorage.getItem('firstName');
+
+  axios.interceptors.request.use(
+    config => {
+      const token = localStorage.getItem('token');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+      return config;
+    },
+    error => Promise.reject(error)
+  );
 
   useEffect(() => {
-    if (userId) {
-      fetchSnippets(userId);
-    } else {
-      toast.error('User ID not found in the URL.');
+    const token = localStorage.getItem('token');
+    const storedUserId = localStorage.getItem('userId');
+
+    if (!token || !storedUserId || storedUserId !== userId) {
+      toast.error('Unauthorized. Please login again.');
+      router.push('/login');
+      return;
     }
+
+    fetchSnippets(userId);
     setLoading(false);
   }, [userId]);
 
@@ -125,19 +149,44 @@ const Dashboard = () => {
     }
   };
 
-  const router = useRouter();
+  const fetchCollaborators = async(id) => {
+    if(id) {
+      try{
+        await axios.get('http://localhost:8080/api/snippets/getCollaborators', {
+          id: id
+        });
+      } catch(error) {
+        toast.error('Failed to get Collaborators');
+      }
+    }
+  }
 
   const handleLogout = () => {
     if (confirm("Are you sure you want to log out?")) {
       localStorage.removeItem('token');
+      localStorage.removeItem('userId');
       router.push('/login');
     }
   };
+
+  const filteredSnippets = snippets.filter(snippet =>
+    snippet.language.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    snippet.code.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const paginate = (items, page) => {
+    const start = (page - 1) * itemsPerPage;
+    return items.slice(start, start + itemsPerPage);
+  };
+
+
   
   return (
     <div className={styles.dashboardContainer}>
       <div className={styles.headerRow}>
-        <h1 className={styles.title}>Snippet Workspace</h1>
+        <h1 className={styles.title}>
+          {firstName ? `Hello ${firstName}, Welcome to your Snippet Workspace` : "Snippet Workspace"}
+        </h1>
         <div className={styles.topActions}>
           <button className={styles.addButton} onClick={openAddSnippetModal}>Add New Snippet</button>
           <button className={styles.logoutButton} onClick={handleLogout}>Logout</button>
@@ -148,7 +197,18 @@ const Dashboard = () => {
         {/* My Snippets (1/3) */}
         <div className={styles.boxOneThird}>
           <h2 className={styles.heading}>My Snippets</h2>
-          {snippets.map(snippet => (
+          <div className={styles.searchWrapper}>
+            <input
+              type="text"
+              placeholder="Search by language or code..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              className={styles.searchInput}
+            />
+            <span className={styles.searchIcon}>🔍</span> 
+          </div>
+
+          {paginate(filteredSnippets, myPage).map(snippet => (
             <li key={snippet.id} className={styles.snippetItem}>
               <div className={styles.snippetMeta}>
                 <span className={styles.languageTag}>{snippet.language}</span>
@@ -159,6 +219,11 @@ const Dashboard = () => {
               </pre>
             </li>
           ))}
+          <div className={styles.pagination}>
+            <button onClick={() => setMyPage(prev => Math.max(prev - 1, 1))} disabled={myPage === 1}>Prev</button>
+            <span>{myPage}</span>
+            <button onClick={() => setMyPage(prev => prev + 1)} disabled={myPage * itemsPerPage >= filteredSnippets.length}>Next</button>
+          </div>
         </div>
 
         {/* Collaboration Section (2/3) */}
@@ -170,17 +235,28 @@ const Dashboard = () => {
             <div className={styles.collabCard}>
               <h3 className={styles.cardTitle}>My Collaborations</h3>
               <ul className={styles.snippetList}>
-                {collaboratedSnippets.map(snippet => (
+                {paginate(collaboratedSnippets, collabPage).map(snippet => (
                   <li key={snippet.id} className={styles.snippetItem}>
                     <div className={styles.snippetMeta}>
                       <span className={styles.languageTag}>{snippet.language}</span>
                       <button className={styles.deleteButton} onClick={() => handleDeleteSnippet(snippet.id)}>Delete</button>
                     </div>
-                    <pre className={styles.codeBlock} onClick={() => openEditModal(snippet)}>
+                    <pre
+                      className={styles.codeBlock}
+                      onClick={() => {
+                        openEditModal(snippet);
+                        fetchCollaborators(snippet.id);
+                      }}
+                    >
                       {snippet.code.length > 60 ? snippet.code.slice(0, 60) + '...' : snippet.code}
                     </pre>
                   </li>
                 ))}
+                <div className={styles.pagination}>
+                  <button onClick={() => setCollabPage(prev => Math.max(prev - 1, 1))} disabled={collabPage === 1}>Prev</button>
+                  <span>{collabPage}</span>
+                  <button onClick={() => setCollabPage(prev => prev + 1)} disabled={collabPage * itemsPerPage >= collaboratedSnippets.length}>Next</button>
+                </div>
               </ul>
             </div>
 
@@ -188,7 +264,7 @@ const Dashboard = () => {
             <div className={styles.collabCard}>
               <h3 className={styles.cardTitle}>Shared With Me</h3>
               <ul className={styles.snippetList}>
-                {sharedSnippets.map(([snippet, permission]) => (
+                {paginate(sharedSnippets, sharedPage).map(([snippet, permission]) => (
                   <li key={snippet.id} className={styles.snippetItem}>
                     <div className={styles.snippetMeta}>
                       <span className={styles.languageTag}>{snippet.language}</span>
@@ -196,13 +272,21 @@ const Dashboard = () => {
                     </div>
                     <pre
                       className={styles.codeBlock}
-                      onClick={() => openSharedEditModal(snippet, permission)}
+                      onClick={() => {
+                        openSharedEditModal(snippet, permission);
+                        fetchCollaborators(snippet.id);
+                      }}
                       style={{ cursor: 'pointer' }}
                     >
                       {snippet.code.length > 60 ? snippet.code.slice(0, 60) + '...' : snippet.code}
                     </pre>
                   </li>
                 ))}
+                <div className={styles.pagination}>
+                  <button onClick={() => setSharedPage(prev => Math.max(prev - 1, 1))} disabled={sharedPage === 1}>Prev</button>
+                  <span>{sharedPage}</span>
+                  <button onClick={() => setSharedPage(prev => prev + 1)} disabled={sharedPage * itemsPerPage >= sharedSnippets.length}>Next</button>
+                </div>
               </ul>
             </div>
           </div>
@@ -281,10 +365,21 @@ const Dashboard = () => {
                             className={styles.select}
                           >
                             <option value="">Select User</option>
-                            {allUsers.map(user => (
-                              <option key={user.id} value={user.id}>{user.email}</option>
-                            ))}
+                            {allUsers
+                              .filter(user => {
+                                const isSelf = user.id == userId;
+                                const isAlreadySelected = collaborators.some(
+                                  (c, i) => c.userId == user.id && i != index
+                                );
+                                return !isSelf && !isAlreadySelected;
+                              })
+                              .map(user => (
+                                <option key={user.id} value={user.id}>
+                                  {user.email}
+                                </option>
+                              ))}
                           </select>
+
 
                           <select
                             value={collab.permission}

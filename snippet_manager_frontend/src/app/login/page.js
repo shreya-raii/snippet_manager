@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -10,6 +10,15 @@ export default function LoginPage() {
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    const userId = localStorage.getItem('userId');
+
+    if (token && userId) {
+      router.replace('/user/dashboard');
+    }
+  }, []);
 
   const validate = () => {
     const newErrors = {};
@@ -33,10 +42,15 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       const response = await axios.post("http://localhost:8080/api/login", formData);
+      localStorage.setItem('token', response.data.token);
+      localStorage.setItem('userId', response.data.user.id);
+      localStorage.setItem('firstName', response.data.user.firstName);
+
       toast.success("Login successful! Redirecting to dashboard...", {
         autoClose: 1500,
-        onClose: () => router.push(`/user/dashboard/${response.data.id}`)
+        onClose: () => router.push('/user/dashboard')
       });
+      
     } catch (error) {
       if (error.response) {
         const { status, data } = error.response;

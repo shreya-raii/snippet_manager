@@ -1,6 +1,8 @@
 package com.example.snippet_manager.controller;
 
+import com.example.snippet_manager.dto.SharedSnippetDTO;
 import com.example.snippet_manager.dto.SnippetDTO;
+import com.example.snippet_manager.model.SharedSnippet;
 import com.example.snippet_manager.model.Snippet;
 import com.example.snippet_manager.service.SnippetService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,13 +33,11 @@ public class SnippetController {
     @GetMapping("/shared/{userId}")
     public ResponseEntity<List<Object[]>> getSharedSnippetsByUserId(@PathVariable Long userId) {
         List<Object[]> snippets = snippetService.getSharedSnippetsByUserId(userId);
-        System.out.println(snippets);
         return ResponseEntity.ok(snippets);
     }
 
     @PostMapping("/create")
     public ResponseEntity<String> createSnippet(@RequestBody SnippetDTO dto) {
-        System.out.println(dto);
         snippetService.saveSnippet(dto);
         return ResponseEntity.ok("Snippet saved");
     }
@@ -50,9 +50,15 @@ public class SnippetController {
 
     @PostMapping("/delete")
     public ResponseEntity<String> deleteSnippet(@RequestBody SnippetDTO dto) {
-        System.out.println("dto Id " + dto.getId());
         snippetService.deleteSnippet(dto.getId());
         return ResponseEntity.ok("Snippet deleted");
     }
 
+    @GetMapping("/getCollaborators")
+    public ResponseEntity<List<Object[]>> getSnippetCollaborators(@PathVariable Long snippetId) {
+        System.out.println(snippetId);
+        List<Object[]> collaborators = snippetService.getSnippetCollaborators(snippetId);
+        System.out.println(collaborators);
+        return ResponseEntity.ok(collaborators);
+    }
 }

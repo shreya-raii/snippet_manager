@@ -14,4 +14,6 @@ public interface SharedSnippetRepository extends JpaRepository<SharedSnippet, Lo
 
     @Query("SELECT s, ss.permission FROM Snippet s JOIN SharedSnippet ss ON s.id = ss.snippetId WHERE ss.sharedUserId = :userId")
     List<Object[]> findSharedSnippetsWithPermissionByUserId(@Param("userId") Long userId);
+
+    List<Object[]> findAllBySnippetId(Long snippetId);
 }

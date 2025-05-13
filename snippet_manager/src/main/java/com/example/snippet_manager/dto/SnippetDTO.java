@@ -15,7 +15,7 @@ public class SnippetDTO {
     private String language;
     private String code;
     private Long userId;
-    private List<CollaboratorDTO> collaborators;  // ✅ Needed for getCollaborators()
+    private List<CollaboratorDTO> collaborators;
 
     @Data
     @NoArgsConstructor

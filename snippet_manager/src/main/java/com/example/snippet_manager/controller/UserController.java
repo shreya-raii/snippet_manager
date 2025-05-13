@@ -36,18 +36,7 @@ public class UserController {
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginDTO login) {
-        String result = userService.login(login);
-
-        switch (result) {
-            case "Login successful":
-                return ResponseEntity.ok(userService.getUserByEmail(login.getEmail()).get());
-            case "Email doesn't exist, please register":
-                return ResponseEntity.status(404).body(result); // Client should handle redirect to registration
-            case "Password incorrect":
-                return ResponseEntity.status(401).body(result);
-            default:
-                return ResponseEntity.status(500).body("Unexpected error");
-        }
+        return userService.login(login);
     }
 
     @GetMapping("/users")
