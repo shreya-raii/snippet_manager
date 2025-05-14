@@ -22,7 +22,6 @@ public class UserController {
     @PostMapping("/register")
     public ResponseEntity<String> register(@RequestBody UserDTO request) {
         String result = userService.registerUser(request);
-        System.out.println(result);
 
         switch(result) {
             case "Registration successful":

@@ -29,7 +29,6 @@ public class UserService {
         User user = User.builder()
                 .firstName(dto.getFirstname())
                 .lastName(dto.getLastname())
-                .dob(dto.getDob())
                 .email(dto.getEmail())
                 .password(dto.getPassword()) // TODO: Hash password before storing
                 .build();

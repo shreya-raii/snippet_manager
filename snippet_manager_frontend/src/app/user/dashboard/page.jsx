@@ -1,11 +1,10 @@
 'use client';
-
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import styles from './dashboard.module.css';
 import { toast } from 'react-toastify';
-import { useParams } from 'next/navigation';
 import { useRouter } from 'next/navigation';
+import websocketService from '../../../services/websocket';
 
 const Dashboard = () => {
   const [snippets, setSnippets] = useState([]);
@@ -23,16 +22,18 @@ const Dashboard = () => {
   const [allUsers, setAllUsers] = useState([]);
   const [permissionAccess, setPermissionAccess] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [snippetCollaborators, setSnippetCollaborators] = useState([]);
+  const [collaboratorSearch, setCollaboratorSearch] = useState('');
   
   const itemsPerPage = 5;
   const [myPage, setMyPage] = useState(1);
   const [collabPage, setCollabPage] = useState(1);
   const [sharedPage, setSharedPage] = useState(1);
 
-  const router = useRouter();
+  const [userId, setUserId] = useState(null);
+  const [firstName, setFirstName] = useState("");
 
-  const userId = localStorage.getItem('userId');
-  const firstName = localStorage.getItem('firstName');
+  const router = useRouter();
 
   axios.interceptors.request.use(
     config => {
@@ -48,16 +49,26 @@ const Dashboard = () => {
   useEffect(() => {
     const token = localStorage.getItem('token');
     const storedUserId = localStorage.getItem('userId');
+    const storedFirstName = localStorage.getItem('firstName');
 
-    if (!token || !storedUserId || storedUserId !== userId) {
+    if (!token || !storedUserId) {
       toast.error('Unauthorized. Please login again.');
       router.push('/login');
       return;
-    }
-
-    fetchSnippets(userId);
+    } 
+    
+    setUserId(storedUserId);
+    setFirstName(storedFirstName);
+    fetchSnippets(storedUserId);
     setLoading(false);
-  }, [userId]);
+
+    if (snippetId) {
+      websocketService.subscribeToSnippet(snippetId, (newCode) => {
+        console.log('Incoming WebSocket Data:', newCode);
+        setCurrentSnippet((prev) => ({ ...prev, code: newCode }));
+      });
+    }
+  }, [snippetId]);
 
   const fetchSnippets = async (userId) => {
     try {
@@ -127,6 +138,7 @@ const Dashboard = () => {
           userId: userId
         });
         toast.success('Snippet updated!');
+        websocketService.sendEditSnippet(snippetId, currentSnippet.code);
         setEditModalOpen(false);
         fetchSnippets(userId);
       } catch (error) {
@@ -152,9 +164,10 @@ const Dashboard = () => {
   const fetchCollaborators = async(id) => {
     if(id) {
       try{
-        await axios.get('http://localhost:8080/api/snippets/getCollaborators', {
+        const response = await axios.post('http://localhost:8080/api/snippets/getCollaborators', {
           id: id
         });
+        setSnippetCollaborators(response.data);
       } catch(error) {
         toast.error('Failed to get Collaborators');
       }
@@ -179,12 +192,14 @@ const Dashboard = () => {
     return items.slice(start, start + itemsPerPage);
   };
 
-
+  const filteredCollaborators = snippetCollaborators.flat().filter(
+    c => c?.email?.toLowerCase().includes(collaboratorSearch.toLowerCase())
+  );
   
   return (
     <div className={styles.dashboardContainer}>
       <div className={styles.headerRow}>
-        <h1 className={styles.title}>
+        <h1 className={`${styles.title} ${styles.fadeIn}`}>
           {firstName ? `Hello ${firstName}, Welcome to your Snippet Workspace` : "Snippet Workspace"}
         </h1>
         <div className={styles.topActions}>
@@ -192,38 +207,48 @@ const Dashboard = () => {
           <button className={styles.logoutButton} onClick={handleLogout}>Logout</button>
         </div>
       </div>
+      <hr className={styles.divider} />
 
       <div className={styles.gridContainer}>
         {/* My Snippets (1/3) */}
         <div className={styles.boxOneThird}>
           <h2 className={styles.heading}>My Snippets</h2>
-          <div className={styles.searchWrapper}>
-            <input
-              type="text"
-              placeholder="Search by language or code..."
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-              className={styles.searchInput}
-            />
-            <span className={styles.searchIcon}>🔍</span> 
-          </div>
-
-          {paginate(filteredSnippets, myPage).map(snippet => (
-            <li key={snippet.id} className={styles.snippetItem}>
-              <div className={styles.snippetMeta}>
-                <span className={styles.languageTag}>{snippet.language}</span>
-                <button className={styles.deleteButton} onClick={() => handleDeleteSnippet(snippet.id)}>Delete</button>
+          {filteredSnippets.length > 0 ? (
+            <>
+              <div className={styles.searchWrapper}>
+                <input
+                  type="text"
+                  placeholder="Search by language or code..."
+                  value={searchTerm}
+                  onChange={e => setSearchTerm(e.target.value)}
+                  className={styles.searchInput}
+                />
+                <span className={styles.searchIcon}>🔍</span>
               </div>
-              <pre className={styles.codeBlock} onClick={() => openEditModal(snippet)}>
-                {snippet.code.length > 60 ? snippet.code.slice(0, 60) + '...' : snippet.code}
-              </pre>
-            </li>
-          ))}
-          <div className={styles.pagination}>
-            <button onClick={() => setMyPage(prev => Math.max(prev - 1, 1))} disabled={myPage === 1}>Prev</button>
-            <span>{myPage}</span>
-            <button onClick={() => setMyPage(prev => prev + 1)} disabled={myPage * itemsPerPage >= filteredSnippets.length}>Next</button>
-          </div>
+
+              {paginate(filteredSnippets, myPage).map(snippet => (
+                <li key={snippet.id} className={styles.snippetItem}>
+                  <div className={styles.snippetMeta}>
+                    <span className={styles.languageTag}>{snippet.language}</span>
+                    <button className={styles.deleteButton} onClick={() => handleDeleteSnippet(snippet.id)}>Delete</button>
+                  </div>
+                  <pre className={styles.codeBlock} onClick={() => openEditModal(snippet)}>
+                    {snippet.code.length > 60 ? snippet.code.slice(0, 60) + '...' : snippet.code}
+                  </pre>
+                </li>
+              ))}
+
+              {filteredSnippets.length > itemsPerPage && (
+                <div className={styles.pagination}>
+                  <button onClick={() => setMyPage(prev => Math.max(prev - 1, 1))} disabled={myPage === 1}>Prev</button>
+                  <span>{myPage}</span>
+                  <button onClick={() => setMyPage(prev => prev + 1)} disabled={myPage * itemsPerPage >= filteredSnippets.length}>Next</button>
+                </div>
+              )}
+            </>
+          ) : (
+            <p className={styles.noSnippetsMessage}>No snippets available to show.</p>
+          )}
         </div>
 
         {/* Collaboration Section (2/3) */}
@@ -234,60 +259,72 @@ const Dashboard = () => {
             {/* Collaborated Snippets Box */}
             <div className={styles.collabCard}>
               <h3 className={styles.cardTitle}>My Collaborations</h3>
-              <ul className={styles.snippetList}>
-                {paginate(collaboratedSnippets, collabPage).map(snippet => (
-                  <li key={snippet.id} className={styles.snippetItem}>
-                    <div className={styles.snippetMeta}>
-                      <span className={styles.languageTag}>{snippet.language}</span>
-                      <button className={styles.deleteButton} onClick={() => handleDeleteSnippet(snippet.id)}>Delete</button>
+              {collaboratedSnippets.length > 0 ? (
+                <ul className={styles.snippetList}>
+                  {paginate(collaboratedSnippets, collabPage).map(snippet => (
+                    <li key={snippet.id} className={styles.snippetItem}>
+                      <div className={styles.snippetMeta}>
+                        <span className={styles.languageTag}>{snippet.language}</span>
+                        <button className={styles.deleteButton} onClick={() => handleDeleteSnippet(snippet.id)}>Delete</button>
+                      </div>
+                      <pre
+                        className={styles.codeBlock}
+                        onClick={() => {
+                          openEditModal(snippet);
+                          fetchCollaborators(snippet.id);
+                        }}
+                      >
+                        {snippet.code.length > 60 ? snippet.code.slice(0, 60) + '...' : snippet.code}
+                      </pre>
+                    </li>
+                  ))}
+                  {collaboratedSnippets.length > itemsPerPage && (
+                    <div className={styles.pagination}>
+                      <button onClick={() => setCollabPage(prev => Math.max(prev - 1, 1))} disabled={collabPage === 1}>Prev</button>
+                      <span>{collabPage}</span>
+                      <button onClick={() => setCollabPage(prev => prev + 1)} disabled={collabPage * itemsPerPage >= collaboratedSnippets.length}>Next</button>
                     </div>
-                    <pre
-                      className={styles.codeBlock}
-                      onClick={() => {
-                        openEditModal(snippet);
-                        fetchCollaborators(snippet.id);
-                      }}
-                    >
-                      {snippet.code.length > 60 ? snippet.code.slice(0, 60) + '...' : snippet.code}
-                    </pre>
-                  </li>
-                ))}
-                <div className={styles.pagination}>
-                  <button onClick={() => setCollabPage(prev => Math.max(prev - 1, 1))} disabled={collabPage === 1}>Prev</button>
-                  <span>{collabPage}</span>
-                  <button onClick={() => setCollabPage(prev => prev + 1)} disabled={collabPage * itemsPerPage >= collaboratedSnippets.length}>Next</button>
-                </div>
-              </ul>
+                  )}
+                </ul>
+              ) : (
+                <p className={styles.noSnippetsMessage}>No collaborated snippets available to show.</p>
+              )}
             </div>
 
             {/* Shared With Me Box */}
             <div className={styles.collabCard}>
               <h3 className={styles.cardTitle}>Shared With Me</h3>
-              <ul className={styles.snippetList}>
-                {paginate(sharedSnippets, sharedPage).map(([snippet, permission]) => (
-                  <li key={snippet.id} className={styles.snippetItem}>
-                    <div className={styles.snippetMeta}>
-                      <span className={styles.languageTag}>{snippet.language}</span>
-                      <span className={styles.permissionTag}>{permission}-access</span>
+              {sharedSnippets.length > 0 ? (
+                <ul className={styles.snippetList}>
+                  {paginate(sharedSnippets, sharedPage).map(([snippet, permission]) => (
+                    <li key={snippet.id} className={styles.snippetItem}>
+                      <div className={styles.snippetMeta}>
+                        <span className={styles.languageTag}>{snippet.language}</span>
+                        <span className={styles.permissionTag}>{permission}-access</span>
+                      </div>
+                      <pre
+                        className={styles.codeBlock}
+                        onClick={() => {
+                          openSharedEditModal(snippet, permission);
+                          fetchCollaborators(snippet.id);
+                        }}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        {snippet.code.length > 60 ? snippet.code.slice(0, 60) + '...' : snippet.code}
+                      </pre>
+                    </li>
+                  ))}
+                  {sharedSnippets > itemsPerPage && (
+                    <div className={styles.pagination}>
+                      <button onClick={() => setSharedPage(prev => Math.max(prev - 1, 1))} disabled={sharedPage === 1}>Prev</button>
+                      <span>{sharedPage}</span>
+                      <button onClick={() => setSharedPage(prev => prev + 1)} disabled={sharedPage * itemsPerPage >= sharedSnippets.length}>Next</button>
                     </div>
-                    <pre
-                      className={styles.codeBlock}
-                      onClick={() => {
-                        openSharedEditModal(snippet, permission);
-                        fetchCollaborators(snippet.id);
-                      }}
-                      style={{ cursor: 'pointer' }}
-                    >
-                      {snippet.code.length > 60 ? snippet.code.slice(0, 60) + '...' : snippet.code}
-                    </pre>
-                  </li>
-                ))}
-                <div className={styles.pagination}>
-                  <button onClick={() => setSharedPage(prev => Math.max(prev - 1, 1))} disabled={sharedPage === 1}>Prev</button>
-                  <span>{sharedPage}</span>
-                  <button onClick={() => setSharedPage(prev => prev + 1)} disabled={sharedPage * itemsPerPage >= sharedSnippets.length}>Next</button>
-                </div>
-              </ul>
+                  )}
+                </ul>
+              ) : (
+                <p className={styles.noSnippetsMessage}>No shared snippets available to show.</p>
+              )}
             </div>
           </div>
         </div>
@@ -429,26 +466,60 @@ const Dashboard = () => {
 
       {editModalOpen && (
         <div className={styles.modalOverlay}>
-          <div className={styles.modal}>
+          <div className={styles.editmodal}>
             <h3>Edit Snippet - {currentSnippet.language}</h3>
+
             {permissionAccess === 'Read' && (
               <div style={{ color: 'gray', fontStyle: 'italic', marginBottom: '0.5rem', fontSize: '15px' }}>
                 🔒 Read-only access. You can view the snippet but not edit it.
               </div>
             )}
-            <textarea
-              className={styles.textarea}
-              rows={10}
-              value={currentSnippet.code}
-              onChange={(e) => setCurrentSnippet({ ...currentSnippet, code: e.target.value })}
-            />
-            <div className={styles.modalActions}>
-              <button onClick={() => setEditModalOpen(false)}>Cancel</button>
-              <span title={permissionAccess === 'Read' ? 'read-only access' : ''}>
-                <button disabled={permissionAccess === 'Read'}
-                  style={{ cursor: permissionAccess === 'Read' ? 'not-allowed' : 'pointer' }}
-                  onClick={handleUpdateSnippet}>Save</button>
-              </span>
+
+            <div className={styles.modalContent}>
+              {/* Left side: Code editor */}
+              <div className={styles.codeEditor}>
+                <textarea
+                  className={styles.textarea}
+                  rows={10}
+                  value={currentSnippet?.code || ''}
+                  onChange={(e) => {
+                    const updatedCode = e.target.value;
+                    setCurrentSnippet((prev) => ({ ...prev, code: updatedCode }));
+                    websocketService.sendEditSnippet(snippetId, updatedCode);
+                  }}
+                  disabled={permissionAccess === 'Read'}
+                />
+                <div className={styles.modalActions}>
+                  <button onClick={() => setEditModalOpen(false)}>Cancel</button>
+                  <span title={permissionAccess === 'Read' ? 'read-only access' : ''}>
+                    <button
+                      disabled={permissionAccess === 'Read'}
+                      style={{ cursor: permissionAccess === 'Read' ? 'not-allowed' : 'pointer' }}
+                      onClick={handleUpdateSnippet}
+                    >
+                      Save
+                    </button>
+                  </span>
+                </div>
+              </div>
+
+              {/* Right side: Collaborators */}
+              <div className={styles.collaboratorPanel}>
+                <input
+                  type="text"
+                  placeholder="🔍   Search Collaborators.."
+                  value={collaboratorSearch}
+                  onChange={(e) => setCollaboratorSearch(e.target.value)}
+                  className={styles.collaboratorSearch}
+                />
+                <ul className={styles.collaboratorList}>
+                  {filteredCollaborators.map((c) => (
+                    <li key={c.id} className={styles.collaboratorItem}>
+                      <strong>{c.email}</strong>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
           </div>
         </div>

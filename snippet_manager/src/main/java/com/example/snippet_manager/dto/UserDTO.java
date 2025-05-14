@@ -1,6 +1,5 @@
 package com.example.snippet_manager.dto;
 
-import java.time.LocalDate;
 import lombok.*;
 
 @Getter
@@ -13,6 +12,5 @@ public class UserDTO {
     private String lastname;
     private String email;
     private String password;
-    private LocalDate dob;
 }
 

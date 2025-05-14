@@ -9,7 +9,6 @@ export default function RegisterPage() {
   const [formData, setFormData] = useState({
     firstname: '',
     lastname: '',
-    dob: '',
     email: '',
     password: ''
   });
@@ -30,7 +29,6 @@ export default function RegisterPage() {
     const newErrors = {};
     if (!formData.firstname) newErrors.firstname = 'First name is required';
     if (!formData.lastname) newErrors.lastname = 'Last name is required';
-    if (!formData.dob) newErrors.dob = 'Date of birth is required';
     if (!formData.email) newErrors.email = 'Email is required';
     else if (!/^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$/g.test(formData.email))
       newErrors.email = 'Enter a valid email';
@@ -83,11 +81,11 @@ export default function RegisterPage() {
       <div className="bg-white p-8 rounded-2xl shadow-md w-full max-w-md">
         <h1 className="text-3xl font-bold text-center mb-6 text-gray-800">Register</h1>
         <form onSubmit={handleSubmit} className="space-y-5">
-          {['firstname', 'lastname', 'dob', 'email', 'password'].map((field) => (
+          {['firstname', 'lastname', 'email', 'password'].map((field) => (
             <div key={field}>
               <label className="block mb-1 text-gray-700 capitalize">{field.replace('_', ' ')}</label>
               <input
-                type={field === 'dob' ? 'date' : field === 'password' ? 'password' : 'text'}
+                type={field === 'password' ? 'password' : 'text'}
                 name={field}
                 value={formData[field]}
                 onChange={handleChange}

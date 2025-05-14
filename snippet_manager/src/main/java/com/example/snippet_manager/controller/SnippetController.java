@@ -4,6 +4,7 @@ import com.example.snippet_manager.dto.SharedSnippetDTO;
 import com.example.snippet_manager.dto.SnippetDTO;
 import com.example.snippet_manager.model.SharedSnippet;
 import com.example.snippet_manager.model.Snippet;
+import com.example.snippet_manager.model.User;
 import com.example.snippet_manager.service.SnippetService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -54,11 +55,9 @@ public class SnippetController {
         return ResponseEntity.ok("Snippet deleted");
     }
 
-    @GetMapping("/getCollaborators")
-    public ResponseEntity<List<Object[]>> getSnippetCollaborators(@PathVariable Long snippetId) {
-        System.out.println(snippetId);
-        List<Object[]> collaborators = snippetService.getSnippetCollaborators(snippetId);
-        System.out.println(collaborators);
+    @PostMapping("/getCollaborators")
+    public ResponseEntity<List<User>> getSnippetCollaborators(@RequestBody SnippetDTO dto) {
+        List<User> collaborators = snippetService.getSnippetCollaborators(dto.getId());
         return ResponseEntity.ok(collaborators);
     }
 }

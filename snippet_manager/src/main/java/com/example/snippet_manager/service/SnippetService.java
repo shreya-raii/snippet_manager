@@ -3,6 +3,7 @@ package com.example.snippet_manager.service;
 import com.example.snippet_manager.dto.SnippetDTO;
 import com.example.snippet_manager.model.SharedSnippet;
 import com.example.snippet_manager.model.Snippet;
+import com.example.snippet_manager.model.User;
 import com.example.snippet_manager.repository.SharedSnippetRepository;
 import com.example.snippet_manager.repository.SnippetRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -71,8 +72,10 @@ public class SnippetService {
         snippetRepository.delete(existingSnippet);
     }
 
-    public List<Object[]> getSnippetCollaborators(Long id) {
-        List<Object[]> results = sharedSnippetRepository.findAllBySnippetId(id);
-        return results;
+    public List<User> getSnippetCollaborators(Long id) {
+        List<User> sharedUsers = sharedSnippetRepository.findAllSharedUsersBySnippetId(id);
+        User owner = sharedSnippetRepository.findOwnerBySnippetId(id);
+        sharedUsers.add(owner);
+        return sharedUsers;
     }
 }
